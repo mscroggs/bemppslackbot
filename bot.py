@@ -4,11 +4,15 @@ from slackclient import SlackClient
 from dateutil.relativedelta import relativedelta
 import datetime
 from websocket._exceptions import WebSocketConnectionClosedException
+import urllib2
+from os import system
 
 from config import *
 
-def say(thing):
+def say(thing,overwritechan=None):
     global channel
+    if overwritechan is not None:
+        channel = overwritechan
     slack_client.api_call("chat.postMessage",channel=channel, text=thing, as_user=True)
 
 def do_command(c):
@@ -19,7 +23,30 @@ def do_command(c):
         say("I rolled a die and got a "+str(randrange(1,7)))
     elif command == "help":
         say("I am bemppbot. You can find my source code at https://github.com/mscroggs/bemppslackbot")
+    elif command == "version":
+        system("cd /home/pi/slackbot/bempp/bempp;git pull")
+        with open("/home/pi/slackbot/bempp/bempp/VERSION") as f:
+            say("master branch is currently at version "+f.read())
 
+def check_for_commits():
+    with open("/home/pi/slackbot/bempp/done") as f:
+        done = [a.strip() for a in f.readlines()]
+    from xml.etree import ElementTree
+    feed = "https://bitbucket.org/bemppsolutions/bempp/rss"
+    response = urllib2.urlopen(feed)
+    xml = response.read()
+    e = ElementTree.fromstring(xml)
+    c = e.findall("channel")[0]
+    for i in c.findall("item"):
+        guid = i.find("guid").text.strip()
+        if guid not in done:
+            title = i.find("title").text.strip()
+            author = i.find("author").text.split("(")[1].split(")")[0]
+            say(author+" pushed changes: "+", ".join(title.split("\n")),"testing-bemppbot")
+            done.append(guid)
+    with open("/home/pi/slackbot/bempp/done","w") as f:
+        f.write("\n".join(done))
+    
 
 
 def parse_slack_output(output_list):
@@ -49,6 +76,7 @@ if slack_client.rtm_connect():
         try:
             try:
                 parse_slack_output(slack_client.rtm_read())
+                check_for_commits()
             except KeyboardInterrupt:
                 break
             except WebSocketConnectionClosedException:
@@ -58,5 +86,6 @@ if slack_client.rtm_connect():
         except Exception as e:
             with open("/home/pi/slackbot/bempp/log","a") as f:
                 f.write(str(type(e))+" "+e.message+"\n")
+            print(str(type(e))+" "+e.message+"\n")
             time.sleep(60)
         time.sleep(1)
