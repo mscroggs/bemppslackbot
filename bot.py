@@ -42,7 +42,7 @@ def check_for_commits():
         if guid not in done:
             title = i.find("title").text.strip()
             author = i.find("author").text.split("(")[1].split(")")[0]
-            say(author+" pushed changes: "+", ".join(title.split("\n")),"testing-bemppbot")
+            say(author+" pushed changes: "+", ".join(title.split("\n")),"general")
             done.append(guid)
     with open("/home/pi/slackbot/bempp/done","w") as f:
         f.write("\n".join(done))
