@@ -17,6 +17,8 @@ def do_command(c):
     args = c.split(" ")[1:]
     if command in ["die","dice"]:
         say("I rolled a die and got a "+str(randrange(1,7)))
+    elif command == "help":
+        say("I am bemppbot. You can find my source code at https://github.com/mscroggs/bemppslackbot")
 
 
 
