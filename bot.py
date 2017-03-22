@@ -38,23 +38,24 @@ def check_for_commits():
     xml = response.read()
     e = ElementTree.fromstring(xml)
     c = e.findall("channel")[0]
-    more = None
-    mess = None
+    chs = {}
+    mes = {}
     for i in c.findall("item"):
         guid = i.find("guid").text.strip()
         if guid not in done:
             title = i.find("title").text.strip()
             author = i.find("author").text.split("(")[1].split(")")[0]
-            if more is None:
-                mess = author+" pushed changes: "+", ".join(title.split("\n"))
-                more = 0
+            if author in mes:
+                chs[author]+=1
             else:
-                more += 1
+                chs[author]=0
+                mes[author]=", ".join(title.split("\n"))
             done.append(guid)
-        if mess is not None:
-            if more > 0:
-                mess += " and "+str(more)+" other commits "
-            say(mess,"general")
+    for author in chs:
+        mess = author+" pushed commits: "+mes[author]
+        if chs[author] > 0:
+            mess += " and "+str(chs[author])+" other commits "
+        say(mess,"general")
     with open("/home/pi/slackbot/bempp/done","w") as f:
         json.dump(done,f)
 
