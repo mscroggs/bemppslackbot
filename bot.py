@@ -29,24 +29,34 @@ def do_command(c):
             say("master branch is currently at version "+f.read())
 
 def check_for_commits():
+    import json
     with open("/home/pi/slackbot/bempp/done") as f:
-        done = [a.strip() for a in f.readlines()]
+        done = json.load(f)
     from xml.etree import ElementTree
     feed = "https://bitbucket.org/bemppsolutions/bempp/rss"
     response = urllib2.urlopen(feed)
     xml = response.read()
     e = ElementTree.fromstring(xml)
     c = e.findall("channel")[0]
+    more = None
+    mess = None
     for i in c.findall("item"):
         guid = i.find("guid").text.strip()
         if guid not in done:
             title = i.find("title").text.strip()
             author = i.find("author").text.split("(")[1].split(")")[0]
-            say(author+" pushed changes: "+", ".join(title.split("\n")),"general")
+            if more is None:
+                mess = author+" pushed changes: "+", ".join(title.split("\n"))
+                more = 0
+            else:
+                more += 1
             done.append(guid)
+        if mess is not None:
+            if more > 0:
+                mess += " and "+str(more)+" other commits "
+            say(mess,"general")
     with open("/home/pi/slackbot/bempp/done","w") as f:
-        f.write("\n".join(done))
-    
+        json.dump(done,f)
 
 
 def parse_slack_output(output_list):
